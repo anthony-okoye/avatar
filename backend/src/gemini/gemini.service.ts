@@ -75,7 +75,7 @@ export class GeminiService {
     try {
       // Get the generative model
       const model = this.vertexAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
       });
 
       // Construct the prompt for profile analysis
@@ -85,7 +85,7 @@ export class GeminiService {
       const result = await Promise.race([
         model.generateContent(prompt),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Gemini API timeout')), 15000)
+          setTimeout(() => reject(new Error('Gemini API timeout')), 30000)
         ),
       ]) as any;
 
@@ -116,6 +116,106 @@ export class GeminiService {
       
       // Re-throw with context
       throw new Error(`Failed to analyze profile: ${error.message}`);
+    }
+  }
+
+  /**
+   * Analyze article/writeup text to extract professional insights about the author
+   * @param articleText The article or writeup text to analyze
+   * @returns ProfileAnalysis with inferred professional context and preferences
+   */
+  async analyzeArticleText(articleText: string): Promise<ProfileAnalysis> {
+    this.logger.log('Analyzing article text with Gemini');
+    
+    try {
+      // Get the generative model
+      const model = this.vertexAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+      });
+
+      // Construct the prompt for article analysis
+      const prompt = `Analyze this article/writeup and extract professional insights about the author.
+
+Article Text:
+${articleText}
+
+Based on the writing style, content, topics, and tone, infer the following about the author:
+
+1. Professional Role: What role/position does this person likely hold? (e.g., "Senior Product Designer", "Software Engineer", "Marketing Director")
+2. Industry: What industry do they work in? (e.g., "Technology", "Healthcare", "Finance")
+3. Seniority Level: What is their likely seniority? Choose from: "Junior", "Mid-level", "Senior", "Executive", "Expert"
+4. Communication Style:
+   - Tone: How do they communicate? (e.g., "Professional and formal", "Casual and conversational", "Technical and precise")
+   - Verbosity: How detailed are they? Choose from: "low" (concise), "medium" (balanced), "high" (detailed)
+5. Expertise Areas: What topics do they demonstrate expertise in? List 3-5 areas.
+6. Design/Content Preferences (infer from their writing):
+   - Visual style preferences: What design aesthetic might they prefer? (e.g., "Clean and minimal", "Bold and colorful")
+   - UX priority: What UX aspects might they value? (e.g., "Simplicity and clarity", "Feature-rich functionality")
+   - Content they likely engage with: What types of content would resonate? (e.g., "Data-driven insights", "Storytelling")
+   - Topics they might avoid: What might not interest them? (e.g., "Overly technical jargon", "Superficial content")
+
+IMPORTANT RULES:
+- Base your analysis ONLY on what's evident in the writing
+- Be specific and actionable
+- For verbosity, use only: "low", "medium", or "high"
+- Do not make psychological inferences or sensitive personal assessments
+
+Return ONLY valid JSON in this exact format (no markdown, no code blocks, just raw JSON):
+{
+  "professionalContext": {
+    "role": "string",
+    "industry": "string",
+    "seniority": "string"
+  },
+  "communicationStyle": {
+    "tone": "string",
+    "verbosity": "low" | "medium" | "high"
+  },
+  "inferredDesignPreferences": {
+    "visualStyle": "string",
+    "uxPriority": "string"
+  },
+  "inferredContentPreferences": {
+    "respondsTo": ["string", "string", "string"],
+    "avoids": ["string", "string"]
+  }
+}`;
+
+      // Generate content with timeout handling
+      const result = await Promise.race([
+        model.generateContent(prompt),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Gemini API timeout')), 30000)
+        ),
+      ]) as any;
+
+      const response = result.response;
+      const text = response.candidates[0].content.parts[0].text;
+
+      // Parse the JSON response
+      const analysis = this.parseProfileAnalysis(text);
+      
+      this.logger.log('Successfully analyzed article text');
+      return analysis;
+      
+    } catch (error) {
+      this.logger.error(`Error analyzing article text with Gemini: ${error.message}`, error.stack);
+      
+      // Handle specific error cases
+      if (error.message?.includes('timeout')) {
+        throw new Error('Gemini API timeout. Please try again.');
+      }
+      
+      if (error.message?.includes('API key') || error.message?.includes('authentication')) {
+        throw new Error('Invalid Gemini API credentials. Please check your configuration.');
+      }
+      
+      if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
+        throw new Error('Gemini API rate limit exceeded. Please try again later.');
+      }
+      
+      // Re-throw with context
+      throw new Error(`Failed to analyze article text: ${error.message}`);
     }
   }
 
@@ -345,7 +445,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
     try {
       // Get the generative model
       const model = this.vertexAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
       });
 
       // Construct the prompt for persona generation
@@ -355,7 +455,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
       const result = await Promise.race([
         model.generateContent(prompt),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Gemini API timeout')), 15000)
+          setTimeout(() => reject(new Error('Gemini API timeout')), 30000)
         ),
       ]) as any;
 
@@ -395,7 +495,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
     try {
       // Get the generative model
       const model = this.vertexAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
       });
 
       // Construct the prompt for audio script generation
@@ -405,7 +505,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
       const result = await Promise.race([
         model.generateContent(prompt),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Gemini API timeout')), 15000)
+          setTimeout(() => reject(new Error('Gemini API timeout')), 30000)
         ),
       ]) as any;
 
@@ -426,7 +526,7 @@ Return ONLY valid JSON in this exact format (no markdown, no code blocks, just r
         const retryResult = await Promise.race([
           model.generateContent(retryPrompt),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Gemini API timeout')), 15000)
+            setTimeout(() => reject(new Error('Gemini API timeout')), 30000)
           ),
         ]) as any;
         

@@ -3,15 +3,15 @@
 import { useState, FormEvent } from 'react';
 
 interface InputFormProps {
-  onSubmit: (linkedinUrl: string, designBrief: string) => Promise<void>;
+  onSubmit: (articleText: string, designBrief: string) => Promise<void>;
   isLoading: boolean;
   error: string | null;
-  initialLinkedinUrl?: string;
+  initialArticleText?: string;
   initialDesignBrief?: string;
 }
 
 interface ValidationErrors {
-  linkedinUrl?: string;
+  articleText?: string;
   designBrief?: string;
 }
 
@@ -19,28 +19,31 @@ export default function InputForm({
   onSubmit, 
   isLoading, 
   error,
-  initialLinkedinUrl = '',
+  initialArticleText = '',
   initialDesignBrief = ''
 }: InputFormProps) {
-  const [linkedinUrl, setLinkedinUrl] = useState(initialLinkedinUrl);
+  const [articleText, setArticleText] = useState(initialArticleText);
   const [designBrief, setDesignBrief] = useState(initialDesignBrief);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
-  const validateLinkedInUrl = (url: string): string | undefined => {
-    if (!url.trim()) {
-      return 'LinkedIn URL is required';
+  // Calculate word count
+  const wordCount = articleText.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const minWords = 100; // Approximately 500 characters
+  const maxWords = 10000;
+
+  const validateArticleText = (text: string): string | undefined => {
+    if (!text.trim()) {
+      return 'Article text is required';
     }
 
-    // Check if it's a valid URL
-    try {
-      new URL(url);
-    } catch {
-      return 'Invalid URL format';
+    const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+
+    if (words < minWords) {
+      return `Article text must be at least ${minWords} words (currently ${words} words)`;
     }
 
-    // Check if it matches LinkedIn profile pattern
-    if (!/linkedin\.com\/in\/[a-zA-Z0-9-]+/.test(url)) {
-      return 'Must be a valid LinkedIn profile URL (e.g., https://linkedin.com/in/username)';
+    if (words > maxWords) {
+      return `Article text must not exceed ${maxWords} words (currently ${words} words)`;
     }
 
     return undefined;
@@ -49,11 +52,6 @@ export default function InputForm({
   const validateDesignBrief = (brief: string): string | undefined => {
     if (!brief.trim()) {
       return 'Design brief is required';
-    }
-
-    // Check if it's only whitespace
-    if (brief.trim().length === 0) {
-      return 'Design brief cannot be empty or contain only whitespace';
     }
 
     if (brief.trim().length < 10) {
@@ -68,11 +66,11 @@ export default function InputForm({
 
     // Validate inputs
     const errors: ValidationErrors = {};
-    const urlError = validateLinkedInUrl(linkedinUrl);
+    const textError = validateArticleText(articleText);
     const briefError = validateDesignBrief(designBrief);
 
-    if (urlError) {
-      errors.linkedinUrl = urlError;
+    if (textError) {
+      errors.articleText = textError;
     }
     if (briefError) {
       errors.designBrief = briefError;
@@ -86,7 +84,7 @@ export default function InputForm({
     }
 
     // Submit the form
-    await onSubmit(linkedinUrl, designBrief);
+    await onSubmit(articleText, designBrief);
   };
 
   return (
@@ -121,50 +119,70 @@ export default function InputForm({
         </div>
       )}
 
-      {/* LinkedIn URL Input */}
+      {/* Article Text Input */}
       <div className="group">
         <label
-          htmlFor="linkedinUrl"
+          htmlFor="articleText"
           className="block text-sm font-semibold text-gray-700 mb-2"
         >
-          LinkedIn Profile URL
+          Article or Writeup Text
         </label>
-        <div className="relative">
-          <input
-            type="text"
-            id="linkedinUrl"
-            value={linkedinUrl}
-            onChange={(e) => {
-              setLinkedinUrl(e.target.value);
-              // Clear validation error when user starts typing
-              if (validationErrors.linkedinUrl) {
-                setValidationErrors((prev) => ({ ...prev, linkedinUrl: undefined }));
-              }
-            }}
-            disabled={isLoading}
-            placeholder="https://linkedin.com/in/username"
-            className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200 ${
-              validationErrors.linkedinUrl 
-                ? 'border-red-500 bg-red-50' 
-                : 'border-gray-300 hover:border-gray-400 focus:shadow-lg'
-            }`}
-          />
-          {!validationErrors.linkedinUrl && linkedinUrl && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+        <textarea
+          id="articleText"
+          value={articleText}
+          onChange={(e) => {
+            setArticleText(e.target.value);
+            // Clear validation error when user starts typing
+            if (validationErrors.articleText) {
+              setValidationErrors((prev) => ({ ...prev, articleText: undefined }));
+            }
+          }}
+          disabled={isLoading}
+          placeholder="Paste an article, blog post, or writeup by the person (minimum 100 words)..."
+          rows={12}
+          className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed resize-y transition-all duration-200 ${
+            validationErrors.articleText 
+              ? 'border-red-500 bg-red-50' 
+              : 'border-gray-300 hover:border-gray-400 focus:shadow-lg'
+          }`}
+        />
+        
+        {/* Word count indicator */}
+        <div className="mt-2 flex justify-between items-center text-sm">
+          <span className={`font-medium ${
+            wordCount >= minWords 
+              ? 'text-green-600' 
+              : wordCount > 0 
+              ? 'text-amber-600' 
+              : 'text-gray-500'
+          }`}>
+            {wordCount} words
+            {wordCount >= minWords && (
+              <svg className="inline w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-            </div>
-          )}
+            )}
+          </span>
+          <span className="text-gray-400">
+            Minimum: {minWords} words
+          </span>
         </div>
-        {validationErrors.linkedinUrl && (
+
+        {validationErrors.articleText && (
           <p className="mt-2 text-sm text-red-600 flex items-center gap-1 animate-slide-down">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            {validationErrors.linkedinUrl}
+            {validationErrors.articleText}
           </p>
         )}
+        
+        <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Paste an article, blog post, or any written content by the person you want to create a persona for.
+        </p>
       </div>
 
       {/* Design Brief Textarea */}
@@ -188,7 +206,7 @@ export default function InputForm({
           disabled={isLoading}
           placeholder="Describe your design problem, goals, constraints, and medium..."
           rows={6}
-          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed resize-y transition-all duration-200 ${
+          className={`w-full px-4 py-3 border rounded-xl text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed resize-y transition-all duration-200 ${
             validationErrors.designBrief 
               ? 'border-red-500 bg-red-50' 
               : 'border-gray-300 hover:border-gray-400 focus:shadow-lg'

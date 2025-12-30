@@ -27,13 +27,13 @@ export class PersonaPipelineController {
     const requestId = uuidv4();
     this.logger.log(`[${requestId}] Received persona generation request`);
     this.logger.debug(
-      `[${requestId}] LinkedIn URL: ${request.linkedinUrl}, Brief length: ${request.designBrief.length}`,
+      `[${requestId}] Article text length: ${request.articleText.length} characters, Brief length: ${request.designBrief.length}`,
     );
 
     try {
       // Call the pipeline service to generate the persona
       const result = await this.personaPipelineService.generatePersona(
-        request.linkedinUrl,
+        request.articleText,
         request.designBrief,
       );
 
@@ -63,23 +63,6 @@ export class PersonaPipelineController {
   private handleError(error: Error, requestId: string): HttpException {
     const timestamp = new Date().toISOString();
     const message = error.message.toLowerCase();
-
-    // Profile not found or inaccessible (422 Unprocessable Entity)
-    if (
-      message.includes('profile not found') ||
-      message.includes('private') ||
-      message.includes('inaccessible') ||
-      message.includes('not found')
-    ) {
-      const errorResponse: ErrorResponseDto = {
-        error: 'LinkedIn profile not found or inaccessible',
-        code: 'PROFILE_INACCESSIBLE',
-        details: 'Please verify the profile URL is correct and the profile is public',
-        timestamp,
-        requestId,
-      };
-      return new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
-    }
 
     // Rate limit errors (429 Too Many Requests)
     if (message.includes('rate limit') || message.includes('quota')) {
@@ -113,7 +96,6 @@ export class PersonaPipelineController {
     if (
       message.includes('gemini') ||
       message.includes('elevenlabs') ||
-      message.includes('firecrawl') ||
       message.includes('timeout') ||
       message.includes('network') ||
       message.includes('unavailable')

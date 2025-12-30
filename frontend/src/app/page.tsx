@@ -10,7 +10,7 @@ import { GeneratePersonaResponse, PipelineStep } from '@/types/persona';
 import { generatePersona, ApiError } from '@/lib/api-client';
 
 interface PageState {
-  linkedinUrl: string;
+  articleText: string;
   designBrief: string;
   isLoading: boolean;
   currentStep: PipelineStep;
@@ -20,7 +20,7 @@ interface PageState {
 
 export default function PersonaGeneratorPage() {
   const [state, setState] = useState<PageState>({
-    linkedinUrl: '',
+    articleText: '',
     designBrief: '',
     isLoading: false,
     currentStep: 'idle',
@@ -28,10 +28,10 @@ export default function PersonaGeneratorPage() {
     error: null,
   });
 
-  const handleSubmit = async (linkedinUrl: string, designBrief: string) => {
+  const handleSubmit = async (articleText: string, designBrief: string) => {
     // Reset state and start loading
     setState({
-      linkedinUrl,
+      articleText,
       designBrief,
       isLoading: true,
       currentStep: 'scraping',
@@ -54,14 +54,14 @@ export default function PersonaGeneratorPage() {
       }, 3000);
 
       // Call the API
-      const result = await generatePersona(linkedinUrl, designBrief);
+      const result = await generatePersona(articleText, designBrief);
 
       // Clear the progress interval
       clearInterval(progressInterval);
 
       // Update state with result
       setState({
-        linkedinUrl,
+        articleText,
         designBrief,
         isLoading: false,
         currentStep: 'complete',
@@ -84,12 +84,12 @@ export default function PersonaGeneratorPage() {
         // Add additional context for specific error codes
         if (error.code === 'NETWORK_ERROR') {
           errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
-        } else if (error.code === 'PROFILE_INACCESSIBLE') {
-          errorMessage = 'LinkedIn profile not found or inaccessible. Please verify the profile URL is correct and the profile is public.';
         } else if (error.code === 'RATE_LIMIT_EXCEEDED') {
           errorMessage = 'Rate limit exceeded. Please wait a few minutes and try again.';
         } else if (error.code === 'SERVICE_UNAVAILABLE' || error.code === 'SERVICE_AUTH_FAILED') {
           errorMessage = 'AI service temporarily unavailable. Please try again in a few moments.';
+        } else if (error.code === 'VALIDATION_ERROR') {
+          errorMessage = 'Please ensure your article text is at least 500 characters and your design brief is at least 10 characters.';
         }
       } else if (error instanceof Error) {
         errorMessage = error.message;
@@ -98,7 +98,7 @@ export default function PersonaGeneratorPage() {
       // Preserve form data on error for retry
       setState((prev) => ({
         ...prev,
-        linkedinUrl, // Preserve the submitted URL
+        articleText, // Preserve the submitted text
         designBrief, // Preserve the submitted brief
         isLoading: false,
         currentStep: 'idle',
@@ -116,7 +116,7 @@ export default function PersonaGeneratorPage() {
             Personification
           </h1>
           <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-            Transform LinkedIn profiles into actionable designer personas with AI-powered insights
+            Transform articles and writeups into actionable designer personas with AI-powered insights
           </p>
         </header>
 
@@ -129,7 +129,7 @@ export default function PersonaGeneratorPage() {
                 onSubmit={handleSubmit}
                 isLoading={state.isLoading}
                 error={state.error}
-                initialLinkedinUrl={state.linkedinUrl}
+                initialArticleText={state.articleText}
                 initialDesignBrief={state.designBrief}
               />
 
@@ -157,7 +157,7 @@ export default function PersonaGeneratorPage() {
                 <button
                   onClick={() =>
                     setState({
-                      linkedinUrl: '',
+                      articleText: '',
                       designBrief: '',
                       isLoading: false,
                       currentStep: 'idle',

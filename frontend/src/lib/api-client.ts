@@ -17,7 +17,7 @@ export class ApiError extends Error {
 }
 
 export async function generatePersona(
-  linkedinUrl: string,
+  articleText: string,
   designBrief: string
 ): Promise<GeneratePersonaResponse> {
   try {
@@ -27,7 +27,7 @@ export async function generatePersona(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        linkedinUrl,
+        articleText,
         designBrief,
       }),
     });

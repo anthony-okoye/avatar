@@ -21,47 +21,39 @@ export class PersonaPipelineService {
   ) {}
 
   async generatePersona(
-    linkedinUrl: string,
+    articleText: string,
     designBrief: string,
   ): Promise<PersonaGenerationResult> {
     this.logger.log('Starting persona generation pipeline');
     const startTime = Date.now();
 
     try {
-      // Step 1: Scrape LinkedIn profile
-      this.logger.log('Step 1/5: Scraping LinkedIn profile');
-      const profile = await this.retryWithBackoff(
-        () => this.linkedInService.scrapeProfile(linkedinUrl),
-        'LinkedIn scraping',
-      );
-      this.logger.log(`Profile scraped: ${profile.name}`);
-
-      // Step 2: Analyze profile with Gemini
-      this.logger.log('Step 2/5: Analyzing profile with Gemini');
+      // Step 1: Analyze article text with Gemini (replaces LinkedIn scraping + analysis)
+      this.logger.log('Step 1/4: Analyzing article text with Gemini');
       const analysis = await this.retryWithBackoff(
-        () => this.geminiService.analyzeProfile(profile),
-        'Profile analysis',
+        () => this.geminiService.analyzeArticleText(articleText),
+        'Article text analysis',
       );
-      this.logger.log('Profile analysis complete');
+      this.logger.log('Article analysis complete');
 
-      // Step 3: Generate persona with Gemini
-      this.logger.log('Step 3/5: Generating persona with Gemini');
+      // Step 2: Generate persona with Gemini
+      this.logger.log('Step 2/4: Generating persona with Gemini');
       const persona = await this.retryWithBackoff(
         () => this.geminiService.generatePersona(analysis, designBrief),
         'Persona generation',
       );
       this.logger.log(`Persona generated: ${persona.personaName}`);
 
-      // Step 4: Generate audio script with Gemini
-      this.logger.log('Step 4/5: Generating audio script with Gemini');
+      // Step 3: Generate audio script with Gemini
+      this.logger.log('Step 3/4: Generating audio script with Gemini');
       const audioScript = await this.retryWithBackoff(
         () => this.geminiService.generateAudioScript(persona),
         'Audio script generation',
       );
       this.logger.log(`Audio script generated (${audioScript.split(/\s+/).length} words)`);
 
-      // Step 5: Synthesize audio with ElevenLabs
-      this.logger.log('Step 5/5: Synthesizing audio with ElevenLabs');
+      // Step 4: Synthesize audio with ElevenLabs
+      this.logger.log('Step 4/4: Synthesizing audio with ElevenLabs');
       let audioUrl = '';
       
       try {
