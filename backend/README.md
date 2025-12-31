@@ -288,4 +288,4 @@ For deployment help, see:
 
 ## License
 
-UNLICENSED
+MIT License - see [LICENSE](../LICENSE) file for details.

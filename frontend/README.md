@@ -263,4 +263,4 @@ For issues or questions:
 
 ## License
 
-UNLICENSED
+MIT License - see [LICENSE](../LICENSE) file for details.
