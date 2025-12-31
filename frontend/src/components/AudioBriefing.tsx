@@ -18,28 +18,45 @@ export default function AudioBriefing({ audioUrl, transcript, autoPlay = false }
   
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Debug: Log props
+  useEffect(() => {
+    console.log('AudioBriefing props:', { audioUrl, transcript: transcript?.substring(0, 50), autoPlay });
+  }, [audioUrl, transcript, autoPlay]);
+
   // Handle audio loading
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    console.log('AudioBriefing: Setting up audio with URL:', audioUrl);
+
     const handleLoadedMetadata = () => {
+      console.log('AudioBriefing: Metadata loaded, duration:', audio.duration);
       setDuration(audio.duration);
       setIsLoading(false);
       setError(null);
       
       // Auto-play if enabled
       if (autoPlay) {
+        console.log('AudioBriefing: Attempting auto-play');
         audio.play().then(() => {
+          console.log('AudioBriefing: Auto-play successful');
           setIsPlaying(true);
         }).catch((err) => {
-          console.error('Auto-play failed:', err);
+          console.error('AudioBriefing: Auto-play failed:', err);
           // Auto-play might be blocked by browser, that's okay
         });
       }
     };
 
-    const handleError = () => {
+    const handleCanPlay = () => {
+      console.log('AudioBriefing: Can play event fired');
+      setIsLoading(false);
+    };
+
+    const handleError = (e: Event) => {
+      console.error('AudioBriefing: Error loading audio:', e);
+      console.error('AudioBriefing: Audio error details:', audio.error);
       setIsLoading(false);
       setError('Failed to load audio. Please try again.');
     };
@@ -53,16 +70,27 @@ export default function AudioBriefing({ audioUrl, transcript, autoPlay = false }
       setCurrentTime(0);
     };
 
+    const handleLoadStart = () => {
+      console.log('AudioBriefing: Load started');
+    };
+
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('error', handleError);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('loadstart', handleLoadStart);
+
+    // Force load
+    audio.load();
 
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('loadstart', handleLoadStart);
     };
   }, [audioUrl, autoPlay]);
 
@@ -117,8 +145,28 @@ export default function AudioBriefing({ audioUrl, transcript, autoPlay = false }
       </div>
 
       <div className="p-6">
-        {/* Audio Element */}
-        <audio ref={audioRef} src={audioUrl} preload="metadata" />
+        {/* Check if audioUrl is empty */}
+        {!audioUrl || audioUrl.trim() === '' ? (
+          <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-r-xl p-4 shadow-sm">
+            <p className="text-sm text-yellow-700 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              Audio briefing is not available. Please view the transcript below.
+            </p>
+            {transcript && (
+              <div className="mt-4 bg-white rounded-lg p-4 border border-yellow-200">
+                <h4 className="text-sm font-bold text-gray-700 mb-2">Transcript:</h4>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {transcript}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Audio Element */}
+            <audio ref={audioRef} src={audioUrl} preload="metadata" crossOrigin="anonymous" />
 
         {/* Loading State */}
         {isLoading && (
@@ -253,6 +301,8 @@ export default function AudioBriefing({ audioUrl, transcript, autoPlay = false }
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
