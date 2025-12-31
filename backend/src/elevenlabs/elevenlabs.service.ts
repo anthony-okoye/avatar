@@ -17,8 +17,12 @@ export class ElevenLabsService {
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('ELEVENLABS_API_KEY');
     
-    if (!apiKey) {
-      this.logger.warn('ELEVENLABS_API_KEY not configured');
+    // Log for debugging (mask the key)
+    if (apiKey) {
+      const maskedKey = apiKey.substring(0, 7) + '...' + apiKey.substring(apiKey.length - 4);
+      this.logger.log(`ElevenLabs API key loaded: ${maskedKey}`);
+    } else {
+      this.logger.error('ELEVENLABS_API_KEY is not set or empty!');
     }
 
     // Get voice ID from config, default to Rachel
